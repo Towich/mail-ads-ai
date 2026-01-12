@@ -1,0 +1,21 @@
+# Core dependencies
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+aiohttp>=3.9.0
+
+# LLM and Embeddings
+sentence-transformers>=2.2.0
+# Ollama используется через HTTP API, не требуется отдельная библиотека
+
+# Vector Database
+chromadb>=0.4.0
+
+# Git
+GitPython>=3.1.40
+
+# CLI
+rich>=13.7.0
+click>=8.1.7
+
+# Utilities
+python-dotenv>=1.0.0
