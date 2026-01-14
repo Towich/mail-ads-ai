@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     rag_vector_db_path: str = "./data/vector_db"
     rag_index_path: str = "./data/index"
 
+    # Figma
+    figma_api_key: str = ""  # API ключ для Figma (опционально)
+
     # Application
     app_log_level: str = "INFO"
     app_data_dir: str = "./data"

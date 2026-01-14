@@ -21,14 +21,11 @@ from infrastructure.tools.git_tools import (
     GitFileHistoryTool,
 )
 from infrastructure.tools.rag_tool import RAGSearchTool
-from infrastructure.logging.rich_logger import setup_rich_logging, RichLogger
+from infrastructure.mcp.figma_client import FigmaMCPClient
+from infrastructure.tools.figma_tools import FigmaGetFileTool, FigmaListToolsTool
+from infrastructure.logging.rich_logger import setup_logging
 from application.services.agent_service import AgentService
 from application.cli.cli import CLI
-from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
-
-console = Console()
 
 
 async def initialize_rag(settings, ollama_llm=None) -> RAGSystem:
@@ -76,18 +73,11 @@ async def main():
     # Загрузка настроек
     settings = get_settings()
 
-    # Настройка красивого логирования
-    setup_rich_logging(settings.app_log_level)
+    # Настройка логирования
+    setup_logging(settings.app_log_level)
     logger = logging.getLogger(__name__)
 
-    # Красивый вывод при старте
-    console.print()
-    console.print(Panel(
-        Text("🚀 ИИ-агент CLI запускается...", style="bold green"),
-        border_style="green",
-        padding=(1, 2),
-    ))
-    console.print()
+    logger.info("🚀 ИИ-агент CLI запускается...")
 
     try:
         # Инициализация Ollama для эмбеддингов
@@ -98,26 +88,26 @@ async def main():
         )
 
         # Инициализация RAG системы
-        console.print("[cyan]📚 Инициализация RAG системы...[/cyan]")
+        logger.info("📚 Инициализация RAG системы...")
         rag = await initialize_rag(settings, ollama_llm)
 
         # Инициализация LLM
         if settings.vkai_api_key:
-            console.print(f"[green]✅ Используется VK AI (модель: {settings.vkai_model})[/green]")
+            logger.info(f"✅ Используется VK AI (модель: {settings.vkai_model})")
             llm = VKAI(
                 api_key=settings.vkai_api_key,
                 base_url=settings.vkai_base_url,
                 model=settings.vkai_model,
             )
         else:
-            console.print(f"[yellow]✅ Используется Ollama (модель: {settings.ollama_model})[/yellow]")
+            logger.info(f"✅ Используется Ollama (модель: {settings.ollama_model})")
             llm = ollama_llm
 
         # Инициализация инструментов
-        console.print("[cyan]🔧 Инициализация инструментов...[/cyan]")
+        logger.info("🔧 Инициализация инструментов...")
         # Используем рабочую директорию из настроек
         work_dir = os.path.abspath(settings.app_work_dir)
-        console.print(f"[dim]📁 Рабочая директория: {work_dir}[/dim]")
+        logger.info(f"📁 Рабочая директория: {work_dir}")
         
         # Создаем список всех инструментов
         tools = [
@@ -134,7 +124,25 @@ async def main():
             GitFileHistoryTool(repo_path=work_dir),
         ]
         
-        console.print(f"[green]✅ Загружено {len(tools)} инструментов[/green]")
+        # Инициализация Figma MCP клиента и инструментов (если API ключ указан)
+        figma_client = None
+        if settings.figma_api_key:
+            try:
+                logger.info("🎨 Инициализация Figma MCP клиента...")
+                figma_client = FigmaMCPClient(figma_api_key=settings.figma_api_key)
+                # Добавляем Figma инструменты
+                tools.extend([
+                    FigmaGetFileTool(figma_client=figma_client),
+                    FigmaListToolsTool(figma_client=figma_client),
+                ])
+                logger.info("✅ Figma инструменты загружены")
+            except Exception as e:
+                logger.warning(f"Не удалось инициализировать Figma MCP клиент: {e}")
+                logger.warning(f"⚠️  Figma инструменты недоступны: {e}")
+        else:
+            logger.info("Figma API ключ не указан, Figma инструменты не загружены")
+        
+        logger.info(f"✅ Загружено {len(tools)} инструментов")
 
         # Инициализация сервиса агента
         agent_service = AgentService(

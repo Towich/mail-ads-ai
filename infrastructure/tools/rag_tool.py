@@ -4,8 +4,6 @@ import logging
 from typing import Dict, Any
 from infrastructure.tools.base import BaseTool
 from domain.interfaces.rag import RAGInterface
-from infrastructure.logging.rich_logger import RichLogger
-
 logger = logging.getLogger(__name__)
 
 

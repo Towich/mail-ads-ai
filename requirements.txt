@@ -19,3 +19,6 @@ click>=8.1.7
 
 # Utilities
 python-dotenv>=1.0.0
+
+# MCP (Model Context Protocol)
+mcp>=1.0.0

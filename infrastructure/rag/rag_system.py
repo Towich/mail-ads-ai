@@ -9,8 +9,6 @@ import chromadb
 from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer
 from domain.interfaces.rag import RAGInterface
-from infrastructure.logging.rich_logger import RichLogger
-
 logger = logging.getLogger(__name__)
 
 
@@ -213,9 +211,13 @@ class RAGSystem(RAGInterface):
                     "distance": results["distances"][0][i] if results.get("distances") else None,
                 })
             
-            # Красивый вывод результатов
-            RichLogger.log_rag_search(query, documents, top_k)
-            logger.info(f"✅ Найдено {len(documents)} релевантных документов")
+            # Логируем результаты поиска
+            logger.info(f"RAG поиск: '{query}' - найдено {len(documents)} документов")
+            for i, doc in enumerate(documents[:top_k], 1):
+                filepath = doc.get("filepath", "unknown")
+                distance = doc.get("distance")
+                relevance = f"{1 - distance:.2%}" if distance is not None else "N/A"
+                logger.debug(f"  {i}. {filepath} (релевантность: {relevance})")
         else:
             logger.warning("⚠️  RAG поиск не вернул результатов")
 
@@ -289,7 +291,7 @@ class DocumentIndexer:
                     content = f.read()
 
                 rel_path = md_file.relative_to(self.project_root)
-                RichLogger.log_indexing_progress(idx, len(md_files), str(rel_path))
+                logger.info(f"Индексация: [{idx}/{len(md_files)}] {rel_path}")
                 
                 documents.append({
                     "content": content,

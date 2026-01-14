@@ -6,8 +6,6 @@ from typing import List, Dict, Any, Optional
 from domain.interfaces.llm import LLMInterface
 from domain.interfaces.rag import RAGInterface
 from infrastructure.tools.base import BaseTool
-from infrastructure.logging.rich_logger import RichLogger
-
 logger = logging.getLogger(__name__)
 
 
@@ -36,6 +34,36 @@ class AgentService:
     def _get_tools_for_llm(self) -> List[Dict[str, Any]]:
         """Получение списка инструментов в формате для LLM."""
         return [tool.to_dict() for tool in self.tools.values()]
+    
+    def _get_system_prompt_tools_description(self) -> str:
+        """
+        Формирование описания инструментов для системного промпта.
+        
+        Returns:
+            Строка с описанием доступных инструментов
+        """
+        tools_desc = """У тебя есть доступ к следующим инструментам:
+- **rag_search** - семантический поиск по документации проекта. Используй его, когда нужно найти информацию в документации, README, или когда пользователь спрашивает о проекте, его структуре, архитектуре, или как что-то работает.
+- **git_search_file** - поиск файла по названию в репозитории
+- **git_list_files** - список файлов в директории
+- **git_read_file** - чтение содержимого файла
+- **git_current_branch** - текущая ветка git
+- **git_current_changes** - список измененных файлов
+- **git_diff** - diff для файла или коммита
+- **git_log** - история коммитов
+- **git_file_history** - история изменений файла"""
+        
+        # Проверяем наличие Figma инструментов
+        figma_tools = [name for name in self.tools.keys() if name.startswith("figma_")]
+        if figma_tools:
+            tools_desc += "\n\n### Figma инструменты:"
+            for tool_name in figma_tools:
+                tool = self.tools[tool_name]
+                # Используем свойство description из BaseTool
+                description = tool.description
+                tools_desc += f"\n- **{tool_name}** - {description}"
+        
+        return tools_desc
 
     async def process_query(self, query: str) -> str:
         """
@@ -57,21 +85,13 @@ class AgentService:
         messages = []
         
         # Системный промпт
-        system_prompt = """Ты полезный ИИ-ассистент для разработчиков. 
+        tools_description = self._get_system_prompt_tools_description()
+        system_prompt = f"""Ты полезный ИИ-ассистент для разработчиков. 
 Ты помогаешь работать с проектом, отвечаешь на вопросы о коде и документации.
 
-У тебя есть доступ к следующим инструментам:
-- **rag_search** - семантический поиск по документации проекта. Используй его, когда нужно найти информацию в документации, README, или когда пользователь спрашивает о проекте, его структуре, архитектуре, или как что-то работает.
-- **git_search_file** - поиск файла по названию в репозитории
-- **git_list_files** - список файлов в директории
-- **git_read_file** - чтение содержимого файла
-- **git_current_branch** - текущая ветка git
-- **git_current_changes** - список измененных файлов
-- **git_diff** - diff для файла или коммита
-- **git_log** - история коммитов
-- **git_file_history** - история изменений файла
+{tools_description}
 
-Используй инструменты когда нужно найти файлы, прочитать код, получить информацию о репозитории или найти информацию в документации проекта."""
+Используй инструменты когда нужно найти файлы, прочитать код, получить информацию о репозитории, найти информацию в документации проекта или работать с Figma дизайнами."""
         
         messages.append({
             "role": "system",
@@ -90,8 +110,11 @@ class AgentService:
             
             while iteration < max_iterations:
                 iteration += 1
-                RichLogger.log_llm_request(len(messages), has_tools=bool(tools))
-                RichLogger.log_llm_messages(messages, tools)
+                tools_text = " (с инструментами)" if tools else ""
+                logger.info(f"LLM запрос: {len(messages)} сообщений{tools_text}")
+                logger.debug(f"Сообщения в LLM: {json.dumps(messages, ensure_ascii=False, indent=2)}")
+                if tools:
+                    logger.debug(f"Доступно инструментов: {len(tools)}")
                 
                 response = await self.llm.chat(messages, tools=tools)
                 
@@ -172,7 +195,8 @@ class AgentService:
         messages = []
         
         # Системный промпт для ревью
-        system_prompt = """Ты - агент-ревьювер кода. Твоя задача - проводить детальный анализ изменений в коде, 
+        tools_description = self._get_system_prompt_tools_description()
+        system_prompt = f"""Ты - агент-ревьювер кода. Твоя задача - проводить детальный анализ изменений в коде, 
 выявлять потенциальные проблемы, давать конструктивные рекомендации по улучшению кода.
 
 Ты должен обращать внимание на:
@@ -185,16 +209,7 @@ class AgentService:
 - Тестируемость
 - Соответствие стилю кодирования проекта
 
-У тебя есть доступ к следующим инструментам:
-- **rag_search** - семантический поиск по документации проекта. Используй его для поиска информации о стандартах кодирования, архитектуре проекта, best practices.
-- **git_search_file** - поиск файла по названию в репозитории
-- **git_list_files** - список файлов в директории
-- **git_read_file** - чтение содержимого файла. Используй для чтения связанных файлов, чтобы понять контекст изменений.
-- **git_current_branch** - текущая ветка git
-- **git_current_changes** - список измененных файлов
-- **git_diff** - diff для файла или коммита
-- **git_log** - история коммитов
-- **git_file_history** - история изменений файла
+{tools_description}
 
 Используй инструменты для получения дополнительного контекста о проекте, связанных файлах и стандартах кодирования, 
 чтобы дать более точные и релевантные рекомендации."""
@@ -219,8 +234,11 @@ class AgentService:
             
             while iteration < max_iterations:
                 iteration += 1
-                RichLogger.log_llm_request(len(messages), has_tools=bool(tools))
-                RichLogger.log_llm_messages(messages, tools)
+                tools_text = " (с инструментами)" if tools else ""
+                logger.info(f"LLM запрос: {len(messages)} сообщений{tools_text}")
+                logger.debug(f"Сообщения в LLM: {json.dumps(messages, ensure_ascii=False, indent=2)}")
+                if tools:
+                    logger.debug(f"Доступно инструментов: {len(tools)}")
                 
                 response = await self.llm.chat(messages, tools=tools)
                 
@@ -297,7 +315,7 @@ class AgentService:
         }]
 
         try:
-            RichLogger.log_llm_messages(messages)
+            logger.debug(f"Сообщения в LLM: {json.dumps(messages, ensure_ascii=False, indent=2)}")
             response = await self.llm.chat(messages)
             if "choices" in response and len(response["choices"]) > 0:
                 return response["choices"][0].get("message", {}).get("content", "")
@@ -329,12 +347,13 @@ class AgentService:
                         arguments = json.loads(arguments)
 
                     # Логируем вызов инструмента
-                    RichLogger.log_tool_call(tool_name, arguments)
+                    logger.info(f"Вызов инструмента: {tool_name}")
+                    logger.debug(f"Аргументы: {json.dumps(arguments, ensure_ascii=False, indent=2)}")
                     
                     result = await self.tools[tool_name].execute(**arguments)
                     
-                    # Логируем результат (обновляем с результатом)
-                    RichLogger.log_tool_call(tool_name, arguments, result)
+                    # Логируем результат
+                    logger.info(f"Результат инструмента {tool_name}: {json.dumps(result, ensure_ascii=False, indent=2) if isinstance(result, (dict, list)) else str(result)}")
                     
                     results.append(result)
                 except Exception as e:
