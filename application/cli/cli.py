@@ -8,6 +8,7 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.prompt import Prompt
 from application.commands.help_command import HelpCommand
+from application.commands.review_command import ReviewCommand
 from application.services.agent_service import AgentService
 
 console = Console()
@@ -17,15 +18,17 @@ logger = logging.getLogger(__name__)
 class CLI:
     """Интерактивный CLI интерфейс."""
 
-    def __init__(self, agent_service: AgentService):
+    def __init__(self, agent_service: AgentService, repo_path: str = "."):
         """
         Инициализация CLI.
 
         Args:
             agent_service: Сервис агента
+            repo_path: Путь к git репозиторию
         """
         self.agent_service = agent_service
         self.help_command = HelpCommand(agent_service)
+        self.review_command = ReviewCommand(agent_service, repo_path)
         self.running = True
 
     def print_welcome(self):
@@ -38,6 +41,7 @@ class CLI:
 **Доступные команды:**
 - `/help [запрос]` - получить помощь по проекту
 - `/search [запрос]` - поиск по документации
+- `/review` - анализ изменений в git репозитории
 - `/exit` или `/quit` - выход из приложения
 
 Просто введите ваш запрос для общения с агентом.
@@ -69,6 +73,8 @@ class CLI:
                 return await self.help_command.execute(args)
             elif command == "/search":
                 return await self.help_command.execute(args)  # Используем тот же механизм
+            elif command == "/review":
+                return await self.review_command.execute()
             elif command in ["/exit", "/quit"]:
                 self.running = False
                 return "До свидания!"

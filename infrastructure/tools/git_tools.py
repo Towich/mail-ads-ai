@@ -296,13 +296,25 @@ class GitDiffTool(BaseTool):
             if commit:
                 commit_obj = repo.commit(commit)
                 diff = commit_obj.diff(commit_obj.parents[0] if commit_obj.parents else None)
-                diff_text = "\n".join([d.diff.decode("utf-8", errors="ignore") for d in diff])
+                # d.diff может быть как bytes, так и str в зависимости от версии GitPython
+                diff_text = "\n".join([
+                    d.diff.decode("utf-8", errors="ignore") if isinstance(d.diff, bytes) else str(d.diff)
+                    for d in diff
+                ])
             elif filepath:
                 diff = repo.index.diff(None, paths=[filepath])
-                diff_text = "\n".join([d.diff.decode("utf-8", errors="ignore") for d in diff])
+                # d.diff может быть как bytes, так и str в зависимости от версии GitPython
+                diff_text = "\n".join([
+                    d.diff.decode("utf-8", errors="ignore") if isinstance(d.diff, bytes) else str(d.diff)
+                    for d in diff
+                ])
             else:
                 diff = repo.index.diff(None)
-                diff_text = "\n".join([d.diff.decode("utf-8", errors="ignore") for d in diff])
+                # d.diff может быть как bytes, так и str в зависимости от версии GitPython
+                diff_text = "\n".join([
+                    d.diff.decode("utf-8", errors="ignore") if isinstance(d.diff, bytes) else str(d.diff)
+                    for d in diff
+                ])
 
             return {
                 "success": True,

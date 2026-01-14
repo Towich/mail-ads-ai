@@ -144,7 +144,7 @@ async def main():
         )
 
         # Запуск CLI
-        cli = CLI(agent_service)
+        cli = CLI(agent_service, repo_path=work_dir)
         await cli.run()
 
     except KeyboardInterrupt:
