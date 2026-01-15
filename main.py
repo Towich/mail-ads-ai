@@ -23,6 +23,15 @@ from infrastructure.tools.git_tools import (
 from infrastructure.tools.rag_tool import RAGSearchTool
 from infrastructure.mcp.figma_client import FigmaMCPClient
 from infrastructure.tools.figma_tools import FigmaGetFileTool, FigmaListToolsTool
+from infrastructure.mcp.atlassian_client import AtlassianMCPClient
+from infrastructure.tools.atlassian_tools import (
+    JiraSearchTool,
+    JiraGetIssueTool,
+    JiraCreateIssueTool,
+    JiraUpdateIssueTool,
+    JiraTransitionIssueTool,
+    AtlassianListToolsTool,
+)
 from infrastructure.logging.rich_logger import setup_logging
 from application.services.agent_service import AgentService
 from application.cli.cli import CLI
@@ -141,6 +150,37 @@ async def main():
                 logger.warning(f"⚠️  Figma инструменты недоступны: {e}")
         else:
             logger.info("Figma API ключ не указан, Figma инструменты не загружены")
+
+        # Инициализация Atlassian MCP клиента и инструментов (если настройки указаны)
+        atlassian_client = None
+        if settings.jira_url:
+            try:
+                logger.info("🔗 Инициализация Atlassian MCP клиента...")
+                atlassian_client = AtlassianMCPClient(
+                    jira_url=settings.jira_url,
+                    jira_personal_token=settings.jira_personal_token if settings.jira_personal_token else None,
+                    jira_username=settings.jira_username if settings.jira_username else None,
+                    jira_api_token=settings.jira_api_token if settings.jira_api_token else None,
+                    confluence_url=settings.confluence_url if settings.confluence_url else None,
+                    confluence_personal_token=settings.confluence_personal_token if settings.confluence_personal_token else None,
+                    confluence_username=settings.confluence_username if settings.confluence_username else None,
+                    confluence_api_token=settings.confluence_api_token if settings.confluence_api_token else None,
+                )
+                # Добавляем Jira инструменты
+                tools.extend([
+                    JiraSearchTool(atlassian_client=atlassian_client),
+                    JiraGetIssueTool(atlassian_client=atlassian_client),
+                    # JiraCreateIssueTool(atlassian_client=atlassian_client),
+                    # JiraUpdateIssueTool(atlassian_client=atlassian_client),
+                    # JiraTransitionIssueTool(atlassian_client=atlassian_client),
+                    # AtlassianListToolsTool(atlassian_client=atlassian_client),
+                ])
+                logger.info("✅ Atlassian (Jira) инструменты загружены")
+            except Exception as e:
+                logger.warning(f"Не удалось инициализировать Atlassian MCP клиент: {e}")
+                logger.warning(f"⚠️  Atlassian инструменты недоступны: {e}")
+        else:
+            logger.info("Jira URL не указан, Atlassian инструменты не загружены")
         
         logger.info(f"✅ Загружено {len(tools)} инструментов")
 

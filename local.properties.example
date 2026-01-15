@@ -16,6 +16,20 @@ rag.index_path=./data/index
 # Получите API ключ на https://www.figma.com/developers/api#access-tokens
 figma.api_key=your_figma_api_key_here
 
+# Atlassian Jira Configuration
+# Для Server/Data Center используйте Personal Access Token
+jira.url=https://jira.vk.team
+jira.personal_token=your_jira_personal_token_here
+# Для Cloud используйте username + api_token вместо personal_token
+# jira.username=your.email@company.com
+# jira.api_token=your_jira_api_token_here
+
+# Atlassian Confluence Configuration (опционально, для будущего использования)
+# confluence.url=https://confluence.vk.team
+# confluence.personal_token=your_confluence_personal_token_here
+# confluence.username=your.email@company.com
+# confluence.api_token=your_confluence_api_token_here
+
 # Application Settings
 app.log_level=INFO
 app.data_dir=./data

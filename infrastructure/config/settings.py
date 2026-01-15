@@ -33,6 +33,18 @@ class Settings(BaseSettings):
     # Figma
     figma_api_key: str = ""  # API ключ для Figma (опционально)
 
+    # Atlassian Jira
+    jira_url: str = ""  # URL Jira сервера (например: https://jira.vk.team)
+    jira_personal_token: str = ""  # Personal Access Token для Jira Server/Data Center
+    jira_username: str = ""  # Username для Jira Cloud (опционально)
+    jira_api_token: str = ""  # API Token для Jira Cloud (опционально)
+
+    # Atlassian Confluence (опционально, для будущего использования)
+    confluence_url: str = ""  # URL Confluence сервера
+    confluence_personal_token: str = ""  # Personal Access Token для Confluence Server/Data Center
+    confluence_username: str = ""  # Username для Confluence Cloud (опционально)
+    confluence_api_token: str = ""  # API Token для Confluence Cloud (опционально)
+
     # Application
     app_log_level: str = "INFO"
     app_data_dir: str = "./data"
