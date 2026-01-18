@@ -63,6 +63,24 @@ class AgentService:
                 description = tool.description
                 tools_desc += f"\n- **{tool_name}** - {description}"
         
+        # Проверяем наличие Jira инструментов
+        jira_tools = [name for name in self.tools.keys() if name.startswith("jira_")]
+        if jira_tools:
+            tools_desc += "\n\n### Jira инструменты:"
+            for tool_name in jira_tools:
+                tool = self.tools[tool_name]
+                description = tool.description
+                tools_desc += f"\n- **{tool_name}** - {description}"
+        
+        # Проверяем наличие Confluence инструментов
+        confluence_tools = [name for name in self.tools.keys() if name.startswith("confluence_")]
+        if confluence_tools:
+            tools_desc += "\n\n### Confluence инструменты:"
+            for tool_name in confluence_tools:
+                tool = self.tools[tool_name]
+                description = tool.description
+                tools_desc += f"\n- **{tool_name}** - {description}"
+        
         return tools_desc
 
     async def process_query(self, query: str) -> str:
@@ -91,7 +109,7 @@ class AgentService:
 
 {tools_description}
 
-Используй инструменты когда нужно найти файлы, прочитать код, получить информацию о репозитории, найти информацию в документации проекта или работать с Figma дизайнами."""
+Используй инструменты когда нужно найти файлы, прочитать код, получить информацию о репозитории, найти информацию в документации проекта, работать с Figma дизайнами, Jira задачами или Confluence страницами."""
         
         messages.append({
             "role": "system",

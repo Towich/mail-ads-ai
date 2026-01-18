@@ -506,3 +506,475 @@ class AtlassianListToolsTool(BaseTool):
                 "success": False,
                 "error": str(e),
             }
+
+
+class ConfluenceSearchTool(BaseTool):
+    """Инструмент для поиска страниц в Confluence с использованием CQL."""
+
+    def __init__(self, atlassian_client: AtlassianMCPClient):
+        """
+        Инициализация инструмента.
+
+        Args:
+            atlassian_client: Клиент для работы с Atlassian MCP сервером
+        """
+        super().__init__(
+            name="confluence_search",
+            description=(
+                "Поиск страниц в Confluence с использованием CQL (Confluence Query Language). "
+                "Используй этот инструмент для поиска страниц по различным критериям: "
+                "по пространству, заголовку, содержимому, автору и т.д. "
+                "Примеры CQL: 'space = SPACE', 'title ~ \"test\"', "
+                "'text ~ \"documentation\" AND space = DOCS'"
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "cql": {
+                        "type": "string",
+                        "description": "CQL запрос для поиска страниц (например: 'space = SPACE AND title ~ \"test\"')",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Максимальное количество результатов",
+                        "default": 25,
+                    },
+                },
+                "required": ["cql"],
+            },
+        )
+        self.atlassian_client = atlassian_client
+
+    async def execute(self, cql: str, limit: int = 25) -> Dict[str, Any]:
+        """
+        Поиск страниц в Confluence.
+
+        Args:
+            cql: CQL запрос
+            limit: Максимальное количество результатов
+
+        Returns:
+            Результаты поиска
+        """
+        try:
+            result = await self.atlassian_client.call_tool(
+                "confluence_search",
+                arguments={
+                    "cql": cql,
+                    "limit": limit,
+                }
+            )
+            
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "cql": cql,
+                    "data": result.get("result", result),
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.get("error", "Неизвестная ошибка"),
+                    "cql": cql,
+                }
+        except Exception as e:
+            logger.error(f"Ошибка при поиске страниц в Confluence: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "cql": cql,
+            }
+
+
+class ConfluenceGetPageTool(BaseTool):
+    """Инструмент для получения информации о странице в Confluence."""
+
+    def __init__(self, atlassian_client: AtlassianMCPClient):
+        """
+        Инициализация инструмента.
+
+        Args:
+            atlassian_client: Клиент для работы с Atlassian MCP сервером
+        """
+        super().__init__(
+            name="confluence_get_page",
+            description=(
+                "Получение детальной информации о странице в Confluence по её ID. "
+                "Используй этот инструмент для получения полной информации о странице: "
+                "заголовок, содержимое, автор, дата создания, версия и т.д."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "page_id": {
+                        "type": "string",
+                        "description": "ID страницы в Confluence",
+                    },
+                },
+                "required": ["page_id"],
+            },
+        )
+        self.atlassian_client = atlassian_client
+
+    async def execute(self, page_id: str) -> Dict[str, Any]:
+        """
+        Получение информации о странице.
+
+        Args:
+            page_id: ID страницы
+
+        Returns:
+            Информация о странице
+        """
+        try:
+            result = await self.atlassian_client.call_tool(
+                "confluence_get_page",
+                arguments={
+                    "page_id": page_id,
+                }
+            )
+            
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "page_id": page_id,
+                    "data": result.get("result", result),
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.get("error", "Неизвестная ошибка"),
+                    "page_id": page_id,
+                }
+        except Exception as e:
+            logger.error(f"Ошибка при получении страницы {page_id}: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "page_id": page_id,
+            }
+
+
+class ConfluenceCreatePageTool(BaseTool):
+    """Инструмент для создания новой страницы в Confluence."""
+
+    def __init__(self, atlassian_client: AtlassianMCPClient):
+        """
+        Инициализация инструмента.
+
+        Args:
+            atlassian_client: Клиент для работы с Atlassian MCP сервером
+        """
+        super().__init__(
+            name="confluence_create_page",
+            description=(
+                "Создание новой страницы в Confluence. Используй этот инструмент для создания "
+                "документации, заметок, инструкций и других страниц в Confluence. "
+                "Необходимо указать пространство, заголовок и содержимое."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "space_key": {
+                        "type": "string",
+                        "description": "Ключ пространства (например: DOCS, TEAM)",
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Заголовок страницы",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Содержимое страницы (в формате Confluence Storage Format или Markdown)",
+                    },
+                    "parent_id": {
+                        "type": "string",
+                        "description": "ID родительской страницы (опционально, для создания подстраницы)",
+                    },
+                },
+                "required": ["space_key", "title", "content"],
+            },
+        )
+        self.atlassian_client = atlassian_client
+
+    async def execute(
+        self,
+        space_key: str,
+        title: str,
+        content: str,
+        parent_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Создание страницы в Confluence.
+
+        Args:
+            space_key: Ключ пространства
+            title: Заголовок
+            content: Содержимое
+            parent_id: ID родительской страницы
+
+        Returns:
+            Информация о созданной странице
+        """
+        try:
+            arguments = {
+                "space_key": space_key,
+                "title": title,
+                "content": content,
+            }
+            
+            if parent_id:
+                arguments["parent_id"] = parent_id
+            
+            result = await self.atlassian_client.call_tool(
+                "confluence_create_page",
+                arguments=arguments
+            )
+            
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "data": result.get("result", result),
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.get("error", "Неизвестная ошибка"),
+                }
+        except Exception as e:
+            logger.error(f"Ошибка при создании страницы в Confluence: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+            }
+
+
+class ConfluenceUpdatePageTool(BaseTool):
+    """Инструмент для обновления страницы в Confluence."""
+
+    def __init__(self, atlassian_client: AtlassianMCPClient):
+        """
+        Инициализация инструмента.
+
+        Args:
+            atlassian_client: Клиент для работы с Atlassian MCP сервером
+        """
+        super().__init__(
+            name="confluence_update_page",
+            description=(
+                "Обновление существующей страницы в Confluence. Используй этот инструмент для "
+                "изменения заголовка, содержимого и других полей страницы."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "page_id": {
+                        "type": "string",
+                        "description": "ID страницы",
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Новый заголовок страницы (опционально)",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Новое содержимое страницы (опционально)",
+                    },
+                    "version": {
+                        "type": "integer",
+                        "description": "Версия страницы (необходимо для обновления, обычно получается из get_page)",
+                    },
+                },
+                "required": ["page_id"],
+            },
+        )
+        self.atlassian_client = atlassian_client
+
+    async def execute(
+        self,
+        page_id: str,
+        title: Optional[str] = None,
+        content: Optional[str] = None,
+        version: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Обновление страницы в Confluence.
+
+        Args:
+            page_id: ID страницы
+            title: Новый заголовок
+            content: Новое содержимое
+            version: Версия страницы
+
+        Returns:
+            Результат обновления
+        """
+        try:
+            arguments = {"page_id": page_id}
+            
+            if title:
+                arguments["title"] = title
+            if content:
+                arguments["content"] = content
+            if version:
+                arguments["version"] = version
+            
+            result = await self.atlassian_client.call_tool(
+                "confluence_update_page",
+                arguments=arguments
+            )
+            
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "page_id": page_id,
+                    "data": result.get("result", result),
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.get("error", "Неизвестная ошибка"),
+                    "page_id": page_id,
+                }
+        except Exception as e:
+            logger.error(f"Ошибка при обновлении страницы {page_id}: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "page_id": page_id,
+            }
+
+
+class ConfluenceDeletePageTool(BaseTool):
+    """Инструмент для удаления страницы в Confluence."""
+
+    def __init__(self, atlassian_client: AtlassianMCPClient):
+        """
+        Инициализация инструмента.
+
+        Args:
+            atlassian_client: Клиент для работы с Atlassian MCP сервером
+        """
+        super().__init__(
+            name="confluence_delete_page",
+            description=(
+                "Удаление страницы в Confluence. Используй этот инструмент для удаления "
+                "ненужных страниц. Внимание: операция необратима!"
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "page_id": {
+                        "type": "string",
+                        "description": "ID страницы для удаления",
+                    },
+                },
+                "required": ["page_id"],
+            },
+        )
+        self.atlassian_client = atlassian_client
+
+    async def execute(self, page_id: str) -> Dict[str, Any]:
+        """
+        Удаление страницы в Confluence.
+
+        Args:
+            page_id: ID страницы
+
+        Returns:
+            Результат удаления
+        """
+        try:
+            result = await self.atlassian_client.call_tool(
+                "confluence_delete_page",
+                arguments={
+                    "page_id": page_id,
+                }
+            )
+            
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "page_id": page_id,
+                    "data": result.get("result", result),
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.get("error", "Неизвестная ошибка"),
+                    "page_id": page_id,
+                }
+        except Exception as e:
+            logger.error(f"Ошибка при удалении страницы {page_id}: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "page_id": page_id,
+            }
+
+
+class ConfluenceGetSpacesTool(BaseTool):
+    """Инструмент для получения списка пространств в Confluence."""
+
+    def __init__(self, atlassian_client: AtlassianMCPClient):
+        """
+        Инициализация инструмента.
+
+        Args:
+            atlassian_client: Клиент для работы с Atlassian MCP сервером
+        """
+        super().__init__(
+            name="confluence_get_spaces",
+            description=(
+                "Получение списка доступных пространств в Confluence. "
+                "Используй этот инструмент для получения информации о пространствах: "
+                "их ключи, названия, описания и т.д."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Максимальное количество результатов",
+                        "default": 25,
+                    },
+                },
+                "required": [],
+            },
+        )
+        self.atlassian_client = atlassian_client
+
+    async def execute(self, limit: int = 25) -> Dict[str, Any]:
+        """
+        Получение списка пространств.
+
+        Args:
+            limit: Максимальное количество результатов
+
+        Returns:
+            Список пространств
+        """
+        try:
+            result = await self.atlassian_client.call_tool(
+                "confluence_get_spaces",
+                arguments={
+                    "limit": limit,
+                }
+            )
+            
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "data": result.get("result", result),
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.get("error", "Неизвестная ошибка"),
+                }
+        except Exception as e:
+            logger.error(f"Ошибка при получении списка пространств: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+            }

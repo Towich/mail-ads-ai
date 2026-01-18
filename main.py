@@ -31,6 +31,12 @@ from infrastructure.tools.atlassian_tools import (
     JiraUpdateIssueTool,
     JiraTransitionIssueTool,
     AtlassianListToolsTool,
+    ConfluenceSearchTool,
+    ConfluenceGetPageTool,
+    ConfluenceCreatePageTool,
+    ConfluenceUpdatePageTool,
+    ConfluenceDeletePageTool,
+    ConfluenceGetSpacesTool,
 )
 from infrastructure.logging.rich_logger import setup_logging
 from application.services.agent_service import AgentService
@@ -176,6 +182,18 @@ async def main():
                     # AtlassianListToolsTool(atlassian_client=atlassian_client),
                 ])
                 logger.info("✅ Atlassian (Jira) инструменты загружены")
+                
+                # Добавляем Confluence инструменты (если URL указан)
+                if settings.confluence_url:
+                    tools.extend([
+                        ConfluenceSearchTool(atlassian_client=atlassian_client),
+                        ConfluenceGetPageTool(atlassian_client=atlassian_client),
+                        ConfluenceCreatePageTool(atlassian_client=atlassian_client),
+                        ConfluenceUpdatePageTool(atlassian_client=atlassian_client),
+                        ConfluenceDeletePageTool(atlassian_client=atlassian_client),
+                        ConfluenceGetSpacesTool(atlassian_client=atlassian_client),
+                    ])
+                    logger.info("✅ Atlassian (Confluence) инструменты загружены")
             except Exception as e:
                 logger.warning(f"Не удалось инициализировать Atlassian MCP клиент: {e}")
                 logger.warning(f"⚠️  Atlassian инструменты недоступны: {e}")

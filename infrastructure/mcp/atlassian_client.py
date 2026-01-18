@@ -83,6 +83,21 @@ class AtlassianMCPClient:
                 elif self.confluence_username and self.confluence_api_token:
                     env["CONFLUENCE_USERNAME"] = self.confluence_username
                     env["CONFLUENCE_API_TOKEN"] = self.confluence_api_token
+                # Если токен Confluence не указан, но указан токен Jira, попробуем использовать его
+                # (работает, если Jira и Confluence на одном сервере/домене)
+                elif self.jira_personal_token:
+                    logger.warning(
+                        "Токен Confluence не указан, используется токен Jira. "
+                        "Убедитесь, что Jira и Confluence на одном сервере."
+                    )
+                    env["CONFLUENCE_PERSONAL_TOKEN"] = self.jira_personal_token
+                elif self.jira_username and self.jira_api_token:
+                    logger.warning(
+                        "Токен Confluence не указан, используются учетные данные Jira. "
+                        "Убедитесь, что Jira и Confluence на одном домене."
+                    )
+                    env["CONFLUENCE_USERNAME"] = self.jira_username
+                    env["CONFLUENCE_API_TOKEN"] = self.jira_api_token
 
             # Параметры для запуска Atlassian MCP сервера
             # Используем uvx для запуска mcp-atlassian пакета
